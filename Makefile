@@ -5,7 +5,10 @@ SRC          ?= $(shell go list ./... | grep -v vendor)
 TESTARGS     ?= -v
 
 deps:
-	dep ensure
+	docker run --rm -it \
+		-v ${PWD}:/go/src/github.com/$(ORGANIZATION)/$(PROJECT) \
+		-w /go/src/github.com/$(ORGANIZATION)/$(PROJECT) \
+		pottava/dep ensure
 .PHONY: deps
 
 test:
