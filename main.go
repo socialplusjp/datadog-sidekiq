@@ -3,40 +3,45 @@ package main
 import (
 	"flag"
 	"log"
+	"strings"
 
 	"github.com/DataDog/datadog-go/statsd"
 	"github.com/go-redis/redis"
 )
 
+func makeRedisKey(keys []string) string {
+	return strings.Join(keys, ":")
+}
+
 func fetchMetrics(c *redis.Client, namespace string) (map[string]float64, error) {
 	metrics := make(map[string]float64)
 
-	queues, err := c.SMembers(namespace + ":queues").Result()
+	queues, err := c.SMembers(makeRedisKey([]string{namespace, "queues"})).Result()
 	if err != nil {
 		return nil, err
 	}
 
 	for _, queue := range queues {
-		enqueued, err := c.LLen(namespace + ":queue:" + queue).Result()
+		enqueued, err := c.LLen(makeRedisKey([]string{namespace, "queue", queue})).Result()
 		if err != nil {
 			return nil, err
 		}
 		metrics["queue."+queue] = float64(enqueued)
 	}
 
-	retries, err := c.ZCard(namespace + ":retries").Result()
+	retries, err := c.ZCard(makeRedisKey([]string{namespace, "retries"})).Result()
 	if err != nil {
 		return nil, err
 	}
 	metrics["retries"] = float64(retries)
 
-	schedule, err := c.ZCard(namespace + ":schedule").Result()
+	schedule, err := c.ZCard(makeRedisKey([]string{namespace, "schedule"})).Result()
 	if err != nil {
 		return nil, err
 	}
 	metrics["schedule"] = float64(schedule)
 
-	dead, err := c.ZCard(namespace + ":dead").Result()
+	dead, err := c.ZCard(makeRedisKey([]string{namespace, "dead"})).Result()
 	if err != nil {
 		return nil, err
 	}
