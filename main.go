@@ -1,14 +1,14 @@
 package main
 
 import (
+	"flag"
 	"log"
 
 	"github.com/DataDog/datadog-go/statsd"
 	"github.com/go-redis/redis"
 )
 
-func fetchMetrics(c *redis.Client) (map[string]float64, error) {
-	namespace := "development"
+func fetchMetrics(c *redis.Client, namespace string) (map[string]float64, error) {
 	metrics := make(map[string]float64)
 
 	queues, err := c.SMembers(namespace + ":queues").Result()
@@ -46,7 +46,14 @@ func fetchMetrics(c *redis.Client) (map[string]float64, error) {
 }
 
 func main() {
-	statsdClient, err := statsd.New("127.0.0.1:8125")
+	statsdHost := flag.String("statsd-host", "127.0.0.1:8125", "DogStatsd host")
+	redisNamespace := flag.String("redis-namespace", "", "Redis namespace for Sidekiq")
+	redisHost := flag.String("redis-host", "127.0.0.1:6379", "Redis host")
+	redisPassword := flag.String("redis-password", "", "Redis password")
+	redisDB := flag.Int("redis-db", 0, "Redis DB")
+	flag.Parse()
+
+	statsdClient, err := statsd.New(*statsdHost)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -54,12 +61,12 @@ func main() {
 	statsdClient.Namespace = "sidekiq."
 
 	redisClient := redis.NewClient(&redis.Options{
-		Addr: "127.0.0.1:6379",
-		Password: "",
-		DB: 0,
+		Addr:     *redisHost,
+		Password: *redisPassword,
+		DB:       *redisDB,
 	})
 
-	metrics, err := fetchMetrics(redisClient)
+	metrics, err := fetchMetrics(redisClient, *redisNamespace)
 
 	for k, v := range metrics {
 		if err = statsdClient.Gauge(k, v, nil, 1); err != nil {
