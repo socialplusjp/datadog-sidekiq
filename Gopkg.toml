@@ -32,3 +32,7 @@
 [[constraint]]
   name = "github.com/DataDog/datadog-go"
   version = "2.1.0"
+
+[[constraint]]
+  name = "github.com/go-redis/redis"
+  version = "6.10.2"
