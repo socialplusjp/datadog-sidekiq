@@ -32,9 +32,9 @@ cross-build: deps
 	mkdir -p pkg/dist
 
 	docker run --rm -it \
-		-v ${PWD}:/go/src/github.com/$(ORGANIZATION)/$(PROJECT) \
-		-w /go/src/github.com/$(ORGANIZATION)/$(PROJECT) \
-		pottava/gox:go1.10 -osarch="linux/amd64" -output="pkg/{{.OS}}_{{.Arch}}/{{.Dir}}"
+		-v ${PWD}:/gopath/src/$(ORGANIZATION)/$(PROJECT) \
+		-w /gopath/src/$(ORGANIZATION)/$(PROJECT) \
+		tcnksm/gox:1.9 gox -osarch="linux/amd64" -output="pkg/{{.OS}}_{{.Arch}}/{{.Dir}}"
 
 	for PLATFORM in $$(find pkg -mindepth 1 -maxdepth 1 -type d); do \
 		PLATFORM_NAME=$$(basename $$PLATFORM); \
