@@ -31,6 +31,7 @@ $ crontab -l
 | `-redis-namespace` | Redis namespace for Sidekiq | |
 | `-redis-password` | Redis password | |
 | `-statsd-host` | DogStatsD host | 127.0.0.1:8125 |
+| `-version` | Show datadog-sidekiq version | false |
 
 ## Development
 

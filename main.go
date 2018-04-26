@@ -2,12 +2,15 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"strings"
 
 	"github.com/DataDog/datadog-go/statsd"
 	"github.com/go-redis/redis"
 )
+
+const version = "v0.0.2"
 
 func makeRedisKey(keys []string) string {
 	return strings.Join(keys, ":")
@@ -51,12 +54,18 @@ func fetchMetrics(c *redis.Client, namespace string) (map[string]float64, error)
 }
 
 func main() {
+	isShowVersion := flag.Bool("version", false, "Show datadog-sidekiq version")
 	statsdHost := flag.String("statsd-host", "127.0.0.1:8125", "DogStatsD host")
 	redisNamespace := flag.String("redis-namespace", "", "Redis namespace for Sidekiq")
 	redisHost := flag.String("redis-host", "127.0.0.1:6379", "Redis host")
 	redisPassword := flag.String("redis-password", "", "Redis password")
 	redisDB := flag.Int("redis-db", 0, "Redis DB")
 	flag.Parse()
+
+	if *isShowVersion {
+		fmt.Printf("datadog-sidekiq version: %s\n", version)
+		return
+	}
 
 	statsdClient, err := statsd.New(*statsdHost)
 	if err != nil {
