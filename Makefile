@@ -45,7 +45,7 @@ cross-build: deps
 		fi; \
 		\
 		pushd $$PLATFORM; \
-		zip $(CURDIR)/pkg/dist/$${ARCHIVE_NAME}.zip *; \
+		tar -zvcf $(CURDIR)/pkg/dist/$${ARCHIVE_NAME}.tar.gz *; \
 		popd; \
 	done
 
