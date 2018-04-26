@@ -1,6 +1,6 @@
 PROJECT      = datadog-sidekiq
 ORGANIZATION = feedforce
-VERSION      = v0.0.2
+VERSION      := $(shell grep 'const version ' main.go | sed -E 's/.*"(.+)"$$/\1/')
 SRC          ?= $(shell go list ./... | grep -v vendor)
 TESTARGS     ?= -v
 
