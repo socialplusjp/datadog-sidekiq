@@ -2,6 +2,9 @@
 
 Send Sidekiq metrics to Datadog via DogStatsD.
 
+[![GitHub release](https://img.shields.io/github/release/feedforce/datadog-sidekiq.svg?style=flat-square)](https://github.com/feedforce/datadog-sidekiq/releases)
+[![MIT license](https://img.shields.io/github/license/feedforce/datadog-sidekiq.svg?style=flat-square)](https://github.com/feedforce/datadog-sidekiq/blob/master/LICENSE)
+
 ## Installation
 
 Grab the latest binary from the GitHub [releases](https://github.com/feedforce/datadog-sidekiq/releases) page.
