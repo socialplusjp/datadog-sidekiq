@@ -59,5 +59,5 @@ release: cross-build
 		-e GITHUB_TOKEN=${GITHUB_TOKEN} \
 		-v ${PWD}:/go/src/github.com/$(ORGANIZATION)/$(PROJECT) \
 		-w /go/src/github.com/$(ORGANIZATION)/$(PROJECT) \
-		tsub/ghr -draft -username $(ORGANIZATION) -repository $(PROJECT) $(VERSION) pkg/dist/
+		tsub/ghr -username $(ORGANIZATION) -repository $(PROJECT) $(VERSION) pkg/dist/
 .PHONY: release
