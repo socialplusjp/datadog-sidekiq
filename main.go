@@ -72,6 +72,9 @@ func main() {
 	})
 
 	metrics, err := fetchMetrics(redisClient, *redisNamespace)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	for k, v := range metrics {
 		if err = statsdClient.Gauge(k, v, nil, 1); err != nil {
