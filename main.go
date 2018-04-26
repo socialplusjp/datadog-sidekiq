@@ -10,7 +10,7 @@ import (
 	"github.com/go-redis/redis"
 )
 
-const version = "v0.0.3"
+const version = "v0.0.4"
 
 func makeRedisKey(keys []string) string {
 	return strings.Join(keys, ":")
