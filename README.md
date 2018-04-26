@@ -38,7 +38,7 @@ $ crontab -l
 ### Requirements
 
 * Docker
-* Go `~> 1.10.0`
+* Go `~> 1.9.0`
 
 ### Local development
 
