@@ -57,5 +57,5 @@ sidekiq.schedule:0.000000|g
 1. Create and export `$GITHUB_TOKEN` required from [ghr](https://github.com/tcnksm/ghr#github-api-token)
 1. Run `$ git checkout master && git pull origin master`
 1. Bump version in [Makefile](https://github.com/feedforce/datadog-sidekiq/blob/master/Makefile#L3)
-1. Run `$ git commit -m "Bump version" && git push origin master`
+1. Run `$ git commit -am "Bump version" && git push origin master`
 1. Run `$ make release`
