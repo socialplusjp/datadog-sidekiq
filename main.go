@@ -51,7 +51,7 @@ func fetchMetrics(c *redis.Client, namespace string) (map[string]float64, error)
 }
 
 func main() {
-	statsdHost := flag.String("statsd-host", "127.0.0.1:8125", "DogStatsd host")
+	statsdHost := flag.String("statsd-host", "127.0.0.1:8125", "DogStatsD host")
 	redisNamespace := flag.String("redis-namespace", "", "Redis namespace for Sidekiq")
 	redisHost := flag.String("redis-host", "127.0.0.1:6379", "Redis host")
 	redisPassword := flag.String("redis-password", "", "Redis password")
