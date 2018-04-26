@@ -1,6 +1,6 @@
 PROJECT      = datadog-sidekiq
 ORGANIZATION = feedforce
-VERSION      = v0.0.1
+VERSION      = v0.0.2
 SRC          ?= $(shell go list ./... | grep -v vendor)
 TESTARGS     ?= -v
 
