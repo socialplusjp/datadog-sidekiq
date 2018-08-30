@@ -11,7 +11,7 @@ import (
 	"github.com/go-redis/redis"
 )
 
-const version = "v0.0.4"
+const version = "v0.0.5"
 
 func makeRedisKey(keys []string) string {
 	keys = slice.Delete(keys, "")
