@@ -7,12 +7,14 @@ import (
 	"strings"
 
 	"github.com/DataDog/datadog-go/statsd"
+	"github.com/feedforce/datadog-sidekiq/slice"
 	"github.com/go-redis/redis"
 )
 
 const version = "v0.0.4"
 
 func makeRedisKey(keys []string) string {
+	keys = slice.Delete(keys, "")
 	return strings.Join(keys, ":")
 }
 
