@@ -1,3 +1,5 @@
+.env
+.envrc
 /.git
 /.gitignore
 Dockerfile

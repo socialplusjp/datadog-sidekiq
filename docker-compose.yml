@@ -1,0 +1,14 @@
+version: "3"
+services:
+  datadog-sidekiq:
+    build: .
+    command: -redis-host redis:6379 -statsd-host dogstatsd:8125 -tags tag1:value1,tag2,value2
+    depends_on:
+      - dogstatsd
+      - redis
+
+  dogstatsd:
+    image: jonmorehouse/dogstatsd-local
+
+  redis:
+    image: redis:alpine

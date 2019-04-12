@@ -62,6 +62,7 @@ func main() {
 	redisHost := flag.String("redis-host", "127.0.0.1:6379", "Redis host")
 	redisPassword := flag.String("redis-password", "", "Redis password")
 	redisDB := flag.Int("redis-db", 0, "Redis DB")
+	tags := flag.String("tags", "", "Add custom metric tags for Datadog. Specify in \"key:value\" format. Separate by comma to specify multiple tags")
 	flag.Parse()
 
 	if *isShowVersion {
@@ -87,8 +88,10 @@ func main() {
 		log.Fatal(err)
 	}
 
+	separatedTags := strings.Split(*tags, ",")
+
 	for k, v := range metrics {
-		if err = statsdClient.Gauge(k, v, nil, 1); err != nil {
+		if err = statsdClient.Gauge(k, v, separatedTags, 1); err != nil {
 			log.Fatal(err)
 		}
 	}

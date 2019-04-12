@@ -31,6 +31,7 @@ $ crontab -l
 | `-redis-namespace` | Redis namespace for Sidekiq | |
 | `-redis-password` | Redis password | |
 | `-statsd-host` | DogStatsD host | 127.0.0.1:8125 |
+| `-tags` | Add custom metric tags for Datadog. Specify in \"key:value\" format. Separate by comma to specify multiple tags | |
 | `-version` | Show datadog-sidekiq version | false |
 
 ## Development
@@ -42,18 +43,14 @@ $ crontab -l
 
 ### Local development
 
-Recommend using [dogstatsd-local](https://github.com/jonmorehouse/dogstatsd-local).
-
 ```
-$ make deps
-$ docker run --rm -d -p 8125:8125/udp --name dogstatsd-local jonmorehouse/dogstatsd-local
-$ docker run --rm -d -p 6379:6379 redis:alpine
-$ go run main.go
-$ docker logs dogstatsd-local
-2018/04/26 03:15:29 listening over UDP at  0.0.0.0:8125
-sidekiq.retries:0.000000|g
-sidekiq.dead:0.000000|g
-sidekiq.schedule:0.000000|g
+$ docker-compose up -d
+$ docker-compose logs dogstatsd
+Attaching to datadog-sidekiq_dogstatsd_1
+dogstatsd_1        | 2019/04/12 02:55:17 listening over UDP at  0.0.0.0:8125
+dogstatsd_1        | sidekiq.dead:0.000000|g|#tag1:value1,tag2,value2
+dogstatsd_1        | sidekiq.retries:0.000000|g|#tag1:value1,tag2,value2
+dogstatsd_1        | sidekiq.schedule:0.000000|g|#tag1:value1,tag2,value2
 ```
 
 ### Release
