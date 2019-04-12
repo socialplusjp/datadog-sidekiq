@@ -55,9 +55,9 @@ $ docker-compose up -d
 $ docker-compose logs dogstatsd
 Attaching to datadog-sidekiq_dogstatsd_1
 dogstatsd_1        | 2019/04/12 02:55:17 listening over UDP at  0.0.0.0:8125
-dogstatsd_1        | sidekiq.dead:0.000000|g|#tag1:value1,tag2,value2
-dogstatsd_1        | sidekiq.retries:0.000000|g|#tag1:value1,tag2,value2
-dogstatsd_1        | sidekiq.schedule:0.000000|g|#tag1:value1,tag2,value2
+dogstatsd_1        | sidekiq.dead:0.000000|g|#tag1:value1,tag2:value2
+dogstatsd_1        | sidekiq.retries:0.000000|g|#tag1:value1,tag2:value2
+dogstatsd_1        | sidekiq.schedule:0.000000|g|#tag1:value1,tag2:value2
 ```
 
 ### Release
