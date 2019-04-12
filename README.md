@@ -4,10 +4,17 @@ Send Sidekiq metrics to Datadog via DogStatsD.
 
 [![GitHub release](https://img.shields.io/github/release/feedforce/datadog-sidekiq.svg?style=flat-square)](https://github.com/feedforce/datadog-sidekiq/releases)
 [![MIT license](https://img.shields.io/github/license/feedforce/datadog-sidekiq.svg?style=flat-square)](https://github.com/feedforce/datadog-sidekiq/blob/master/LICENSE)
+[![Docker Automated build](https://img.shields.io/docker/cloud/automated/feedforce/datadog-sidekiq.svg?color=blue&style=flat-square)](https://hub.docker.com/r/feedforce/datadog-sidekiq)
 
 ## Installation
 
 Grab the latest binary from the GitHub [releases](https://github.com/feedforce/datadog-sidekiq/releases) page.
+
+or run with Docker.
+
+```
+$ docker run -it feedforce/datadog-sidekiq
+```
 
 ## Usage
 
