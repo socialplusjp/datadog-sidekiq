@@ -46,6 +46,19 @@ func fetchMetrics(c *redis.Client, namespace string) (map[string]float64, error)
 	}
 	metrics["schedule"] = float64(schedule)
 
+	processes, err := c.SMembers(makeRedisKey([]string{namespace, "processes"})).Result()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, process := range processes {
+		busy, err := c.HGet(makeRedisKey([]string{namespace, process}), "busy").Float64()
+		if err != nil {
+			return nil, err
+		}
+		metrics["busy"] += busy
+	}
+
 	dead, err := c.ZCard(makeRedisKey([]string{namespace, "dead"})).Result()
 	if err != nil {
 		return nil, err
