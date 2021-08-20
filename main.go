@@ -32,6 +32,7 @@ func fetchMetrics(c *redis.Client, namespace string) (map[string]float64, error)
 			return nil, err
 		}
 		metrics["queue."+queue] = float64(enqueued)
+		metrics["enqueued"] += float64(enqueued)
 	}
 
 	retries, err := c.ZCard(makeRedisKey([]string{namespace, "retries"})).Result()
