@@ -46,7 +46,7 @@ $ crontab -l
 ### Requirements
 
 * Docker
-* Go `~> 1.9.0`
+* Go `>= 1.17.0`
 
 ### Local development
 
@@ -62,7 +62,8 @@ dogstatsd_1        | sidekiq.schedule:0.000000|g|#tag1:value1,tag2:value2
 
 ### Release
 
-1. Create and export `$GITHUB_TOKEN` required from [ghr](https://github.com/tcnksm/ghr#github-api-token)
+1. Install [goreleaser](https://goreleaser.com/install/)
+1. Create and export `$GITHUB_TOKEN` required `repo` scope for [goreleaser](https://goreleaser.com/quick-start/)
 1. Run `$ git checkout master && git pull origin master`
 1. Bump version in [main.go](https://github.com/feedforce/datadog-sidekiq/blob/master/main.go#L13)
 1. Run `$ git commit -am "Bump version" && git push origin master`
