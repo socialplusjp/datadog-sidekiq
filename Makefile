@@ -4,13 +4,6 @@ VERSION      := $(shell grep 'const version ' main.go | sed -E 's/.*"(.+)"$$/\1/
 SRC          ?= $(shell go list ./... | grep -v vendor)
 TESTARGS     ?= -v
 
-deps:
-	docker run --rm -it \
-		-v ${PWD}:/go/src/github.com/$(ORGANIZATION)/$(PROJECT) \
-		-w /go/src/github.com/$(ORGANIZATION)/$(PROJECT) \
-		pottava/dep ensure
-.PHONY: deps
-
 test:
 	go test $(SRC) $(TESTARGS)
 .PHONY: test
@@ -23,11 +16,11 @@ vet:
 	go vet $(SRC)
 .PHONY: vet
 
-build: deps
+build:
 	go build -o build/$(PROJECT)
 .PHONY: build
 
-cross-build: deps
+cross-build:
 	rm -rf pkg
 	mkdir -p pkg/dist
 
