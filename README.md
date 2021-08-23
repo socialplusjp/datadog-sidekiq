@@ -3,7 +3,7 @@
 Send Sidekiq metrics to Datadog via DogStatsD.
 
 [![GitHub release](https://img.shields.io/github/release/feedforce/datadog-sidekiq.svg?style=flat-square)](https://github.com/feedforce/datadog-sidekiq/releases)
-[![MIT license](https://img.shields.io/github/license/feedforce/datadog-sidekiq.svg?style=flat-square)](https://github.com/feedforce/datadog-sidekiq/blob/master/LICENSE)
+[![MIT license](https://img.shields.io/github/license/feedforce/datadog-sidekiq.svg?style=flat-square)](https://github.com/feedforce/datadog-sidekiq/blob/main/LICENSE)
 [![Docker Automated build](https://img.shields.io/docker/cloud/automated/feedforce/datadog-sidekiq.svg?color=blue&style=flat-square)](https://hub.docker.com/r/feedforce/datadog-sidekiq)
 
 ## Installation
@@ -64,7 +64,7 @@ dogstatsd_1        | sidekiq.schedule:0.000000|g|#tag1:value1,tag2:value2
 
 1. Install [goreleaser](https://goreleaser.com/install/)
 1. Create and export `$GITHUB_TOKEN` required `repo` scope for [goreleaser](https://goreleaser.com/quick-start/)
-1. Run `$ git checkout master && git pull origin master`
-1. Bump version in [main.go](https://github.com/feedforce/datadog-sidekiq/blob/master/main.go#L13)
-1. Run `$ git commit -am "Bump version" && git push origin master`
+1. Run `$ git checkout main && git pull origin main`
+1. Bump version in [main.go](https://github.com/feedforce/datadog-sidekiq/blob/main/main.go#L13)
+1. Run `$ git commit -am "Bump version" && git push origin main`
 1. Run `$ make release`
