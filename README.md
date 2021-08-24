@@ -66,4 +66,5 @@ dogstatsd_1        | sidekiq.schedule:0.000000|g|#tag1:value1,tag2:value2
 1. Run `$ git checkout main && git pull origin main`
 1. Bump version in [main.go](https://github.com/feedforce/datadog-sidekiq/blob/main/main.go#L13)
 1. Run `$ git commit -am "Bump version" && git push origin main`
+1. Run `$ git tag v0.0.0` (Replace 0.0.0 to new version)
 1. Run `$ make release`
