@@ -2,9 +2,10 @@ FROM golang:1.17-alpine as builder
 
 RUN apk add ca-certificates git
 
+ARG VERSION="dev"
 WORKDIR /app
 COPY . /app/
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo -ldflags="-s -w" -o build/datadog-sidekiq
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo -ldflags="-s -w -X main.version=$VERSION" -o build/datadog-sidekiq
 
 FROM scratch
 

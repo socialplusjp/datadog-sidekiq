@@ -19,11 +19,3 @@ vet:
 build:
 	go build -o build/$(PROJECT)
 .PHONY: build
-
-cross-build:
-	goreleaser build --skip-validate --rm-dist
-.PHONY: cross-build
-
-release:
-	goreleaser release --rm-dist
-.PHONY: release

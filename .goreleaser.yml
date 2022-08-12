@@ -4,6 +4,10 @@ before:
 builds:
   - env:
       - CGO_ENABLED=0
+    ldflags:
+      - -s
+      - -w
+      - -X "main.version={{.Version}}"
     goos:
       - linux
     goarch:
@@ -13,4 +17,4 @@ archives:
 checksum:
   name_template: 'v{{ .Version }}_SHASUMS'
 changelog:
-  skip: true
+  sort: asc
