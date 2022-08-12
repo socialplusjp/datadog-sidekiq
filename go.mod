@@ -1,6 +1,6 @@
 module github.com/feedforce/datadog-sidekiq
 
-go 1.16
+go 1.17
 
 require (
 	github.com/DataDog/datadog-go v0.0.0-20180330214955-e67964b4021a
