@@ -57,7 +57,8 @@ func fetchMetrics(c *redis.Client, namespace string) (map[string]float64, error)
 	for _, process := range processes {
 		busy, err := c.HGet(makeRedisKey([]string{namespace, process}), "busy").Float64()
 		if err != nil {
-			return nil, err
+			log.Printf("%s key was not found", makeRedisKey([]string{namespace, process}))
+			continue
 		}
 		metrics["busy"] += busy
 	}
