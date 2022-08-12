@@ -1,12 +1,11 @@
-# see https://docs.github.com/en/actions/guides/publishing-docker-images#publishing-images-to-github-packages
-
-name: Publish GitHub Release and Docker image
+name: Release
 
 on:
   release:
     types: [published]
 
 jobs:
+  # see https://github.com/goreleaser/goreleaser-action
   goreleaser:
     runs-on: ubuntu-latest
     permissions:
@@ -32,6 +31,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  # see https://docs.github.com/en/actions/guides/publishing-docker-images#publishing-images-to-github-packages
   build-and-push-image:
     runs-on: ubuntu-latest
     permissions:
