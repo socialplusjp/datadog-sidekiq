@@ -61,5 +61,5 @@ dogstatsd_1        | sidekiq.schedule:0.000000|g|#tag1:value1,tag2:value2
 
 ### Release
 
-1. Create draft release for new version on GitHub
+1. Create release for new version on GitHub
 1. Release automatically from GitHub Actions
