@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
@@ -8,7 +9,7 @@ import (
 
 	"github.com/DataDog/datadog-go/statsd"
 	"github.com/feedforce/datadog-sidekiq/slice"
-	"github.com/go-redis/redis"
+	"github.com/go-redis/redis/v8"
 )
 
 var version = "dev"
@@ -18,17 +19,17 @@ func makeRedisKey(keys []string) string {
 	return strings.Join(keys, ":")
 }
 
-func fetchMetrics(c *redis.Client, namespace string) (map[string]float64, error) {
+func fetchMetrics(ctx context.Context, c *redis.Client, namespace string) (map[string]float64, error) {
 	metrics := make(map[string]float64)
 
-	queues, err := c.SMembers(makeRedisKey([]string{namespace, "queues"})).Result()
+	queues, err := c.SMembers(ctx, makeRedisKey([]string{namespace, "queues"})).Result()
 	if err != nil {
 		return nil, err
 	}
 
 	var enqueuedSum float64
 	for _, queue := range queues {
-		enqueued, err := c.LLen(makeRedisKey([]string{namespace, "queue", queue})).Result()
+		enqueued, err := c.LLen(ctx, makeRedisKey([]string{namespace, "queue", queue})).Result()
 		if err != nil {
 			return nil, err
 		}
@@ -37,25 +38,25 @@ func fetchMetrics(c *redis.Client, namespace string) (map[string]float64, error)
 	}
 	metrics["enqueued"] = float64(enqueuedSum)
 
-	retries, err := c.ZCard(makeRedisKey([]string{namespace, "retries"})).Result()
+	retries, err := c.ZCard(ctx, makeRedisKey([]string{namespace, "retries"})).Result()
 	if err != nil {
 		return nil, err
 	}
 	metrics["retries"] = float64(retries)
 
-	schedule, err := c.ZCard(makeRedisKey([]string{namespace, "schedule"})).Result()
+	schedule, err := c.ZCard(ctx, makeRedisKey([]string{namespace, "schedule"})).Result()
 	if err != nil {
 		return nil, err
 	}
 	metrics["schedule"] = float64(schedule)
 
-	processes, err := c.SMembers(makeRedisKey([]string{namespace, "processes"})).Result()
+	processes, err := c.SMembers(ctx, makeRedisKey([]string{namespace, "processes"})).Result()
 	if err != nil {
 		return nil, err
 	}
 
 	for _, process := range processes {
-		busy, err := c.HGet(makeRedisKey([]string{namespace, process}), "busy").Float64()
+		busy, err := c.HGet(ctx, makeRedisKey([]string{namespace, process}), "busy").Float64()
 		if err != nil {
 			log.Printf("%s key was not found", makeRedisKey([]string{namespace, process}))
 			continue
@@ -63,7 +64,7 @@ func fetchMetrics(c *redis.Client, namespace string) (map[string]float64, error)
 		metrics["busy"] += busy
 	}
 
-	dead, err := c.ZCard(makeRedisKey([]string{namespace, "dead"})).Result()
+	dead, err := c.ZCard(ctx, makeRedisKey([]string{namespace, "dead"})).Result()
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +101,8 @@ func main() {
 		DB:       *redisDB,
 	})
 
-	metrics, err := fetchMetrics(redisClient, *redisNamespace)
+	var ctx = context.Background()
+	metrics, err := fetchMetrics(ctx, redisClient, *redisNamespace)
 	if err != nil {
 		log.Fatal(err)
 	}
