@@ -55,7 +55,7 @@ jobs:
 
       - name: Transform GitHub Actions metadata to Docker image tags
         id: meta
-        uses: docker/metadata-action@v4
+        uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           # see https://github.com/docker/metadata-action/tree/3a3bb3a81753dc99f090d24ee7e5343838b73a96#tags-input
