@@ -2,10 +2,12 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/DataDog/datadog-go/statsd"
 	"github.com/feedforce/datadog-sidekiq/slice"
@@ -35,6 +37,24 @@ func fetchMetrics(ctx context.Context, c *redis.Client, namespace string) (map[s
 		}
 		metrics["queue."+queue] = float64(enqueued)
 		enqueuedSum += float64(enqueued)
+
+		// Calculate and add queue latency metric
+		contents, err := c.LIndex(ctx, makeRedisKey([]string{namespace, "queue", queue}), -1).Result()
+		if err == nil && contents != "" {
+			var job map[string]float64
+			if err := json.Unmarshal([]byte(contents), &job); err == nil {
+				if enqueuedAt, exists := job["enqueued_at"]; exists {
+					latency := time.Now().Unix() - int64(enqueuedAt)
+					metrics["latency."+queue] = float64(latency)
+				} else {
+					metrics["latency."+queue] = 0
+				}
+			} else {
+				metrics["latency."+queue] = 0
+			}
+		} else {
+			metrics["latency."+queue] = 0
+		}
 	}
 	metrics["enqueued"] = float64(enqueuedSum)
 
