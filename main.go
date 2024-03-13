@@ -21,6 +21,24 @@ func makeRedisKey(keys []string) string {
 	return strings.Join(keys, ":")
 }
 
+func calculateQueueLatency(contents string) float64 {
+	if contents == "" {
+		return 0
+	}
+
+	var job map[string]float64
+	if err := json.Unmarshal([]byte(contents), &job); err != nil {
+		return 0
+	}
+
+	if enqueuedAt, exists := job["enqueued_at"]; exists {
+		latency := time.Now().Unix() - int64(enqueuedAt)
+		return float64(latency)
+	}
+
+	return 0
+}
+
 func fetchMetrics(ctx context.Context, c *redis.Client, namespace string) (map[string]float64, error) {
 	metrics := make(map[string]float64)
 
@@ -31,30 +49,19 @@ func fetchMetrics(ctx context.Context, c *redis.Client, namespace string) (map[s
 
 	var enqueuedSum float64
 	for _, queue := range queues {
+		contents, err := c.LIndex(ctx, makeRedisKey([]string{namespace, "queue", queue}), -1).Result()
+		if err != nil {
+			return nil, err
+		}
+		latency := calculateQueueLatency(contents)
+		metrics["latency."+queue] = latency
+
 		enqueued, err := c.LLen(ctx, makeRedisKey([]string{namespace, "queue", queue})).Result()
 		if err != nil {
 			return nil, err
 		}
 		metrics["queue."+queue] = float64(enqueued)
 		enqueuedSum += float64(enqueued)
-
-		// Calculate and add queue latency metric
-		contents, err := c.LIndex(ctx, makeRedisKey([]string{namespace, "queue", queue}), -1).Result()
-		if err == nil && contents != "" {
-			var job map[string]float64
-			if err := json.Unmarshal([]byte(contents), &job); err == nil {
-				if enqueuedAt, exists := job["enqueued_at"]; exists {
-					latency := time.Now().Unix() - int64(enqueuedAt)
-					metrics["latency."+queue] = float64(latency)
-				} else {
-					metrics["latency."+queue] = 0
-				}
-			} else {
-				metrics["latency."+queue] = 0
-			}
-		} else {
-			metrics["latency."+queue] = 0
-		}
 	}
 	metrics["enqueued"] = float64(enqueuedSum)
 
