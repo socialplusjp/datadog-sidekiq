@@ -51,11 +51,12 @@ func fetchMetrics(ctx context.Context, c *redis.Client, namespace string) (map[s
 	var enqueuedSum float64
 	for _, queue := range queues {
 		contents, err := c.LIndex(ctx, makeRedisKey([]string{namespace, "queue", queue}), -1).Result()
-		if err != nil {
-			return nil, err
+		if err == nil {
+			latency := calculateQueueLatency(contents)
+			metrics["latency."+queue] = latency
+		} else {
+			metrics["latency."+queue] = 0.0
 		}
-		latency := calculateQueueLatency(contents)
-		metrics["latency."+queue] = latency
 
 		enqueued, err := c.LLen(ctx, makeRedisKey([]string{namespace, "queue", queue})).Result()
 		if err != nil {
