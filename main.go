@@ -28,6 +28,7 @@ func calculateQueueLatency(contents string) float64 {
 
 	var job map[string]interface{}
 	if err := json.Unmarshal([]byte(contents), &job); err != nil {
+		log.Println(err)
 		return 0
 	}
 
