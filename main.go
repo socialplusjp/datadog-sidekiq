@@ -26,14 +26,14 @@ func calculateQueueLatency(contents string) float64 {
 		return 0
 	}
 
-	var job map[string]float64
+	var job map[string]interface{}
 	if err := json.Unmarshal([]byte(contents), &job); err != nil {
 		return 0
 	}
 
 	if enqueuedAt, exists := job["enqueued_at"]; exists {
-		latency := time.Now().Unix() - int64(enqueuedAt)
-		return float64(latency)
+		latency := float64(time.Now().UnixNano())/1000000.0 - enqueuedAt.(float64)
+		return latency
 	}
 
 	return 0
