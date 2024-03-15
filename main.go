@@ -2,10 +2,12 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/DataDog/datadog-go/statsd"
 	"github.com/feedforce/datadog-sidekiq/slice"
@@ -19,6 +21,25 @@ func makeRedisKey(keys []string) string {
 	return strings.Join(keys, ":")
 }
 
+func calculateQueueLatency(contents string) float64 {
+	if contents == "" {
+		return 0
+	}
+
+	var job map[string]interface{}
+	if err := json.Unmarshal([]byte(contents), &job); err != nil {
+		log.Println(err)
+		return 0
+	}
+
+	if enqueuedAt, exists := job["enqueued_at"]; exists {
+		latency := float64(time.Now().UnixNano())/1000000.0 - enqueuedAt.(float64)
+		return latency
+	}
+
+	return 0
+}
+
 func fetchMetrics(ctx context.Context, c *redis.Client, namespace string) (map[string]float64, error) {
 	metrics := make(map[string]float64)
 
@@ -29,6 +50,14 @@ func fetchMetrics(ctx context.Context, c *redis.Client, namespace string) (map[s
 
 	var enqueuedSum float64
 	for _, queue := range queues {
+		contents, err := c.LIndex(ctx, makeRedisKey([]string{namespace, "queue", queue}), -1).Result()
+		if err == nil {
+			latency := calculateQueueLatency(contents)
+			metrics["latency."+queue] = latency
+		} else {
+			metrics["latency."+queue] = 0.0
+		}
+
 		enqueued, err := c.LLen(ctx, makeRedisKey([]string{namespace, "queue", queue})).Result()
 		if err != nil {
 			return nil, err
