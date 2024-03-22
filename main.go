@@ -143,4 +143,5 @@ func main() {
 			log.Fatal(err)
 		}
 	}
+	statsdClient.Flush()
 }
