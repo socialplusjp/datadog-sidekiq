@@ -33,7 +33,7 @@ func calculateQueueLatency(contents string) float64 {
 	}
 
 	if enqueuedAt, exists := job["enqueued_at"]; exists {
-		latency := float64(time.Now().UnixNano())/1000000.0 - enqueuedAt.(float64)
+		latency := float64(time.Now().UnixMicro())/1000000.0 - enqueuedAt.(float64)
 		return latency
 	}
 
@@ -143,4 +143,5 @@ func main() {
 			log.Fatal(err)
 		}
 	}
+	statsdClient.Flush()
 }
