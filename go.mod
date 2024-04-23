@@ -1,4 +1,4 @@
-module github.com/feedforce/datadog-sidekiq
+module github.com/socialplusjp/datadog-sidekiq
 
 go 1.17
 
