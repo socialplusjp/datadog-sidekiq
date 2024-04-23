@@ -11,7 +11,7 @@ FROM scratch
 
 ARG VERSION="dev"
 
-LABEL org.opencontainers.image.source="https://github.com/feedforce/datadog-sidekiq"
+LABEL org.opencontainers.image.source="https://github.com/socialplusjp/datadog-sidekiq"
 LABEL org.opencontainers.image.revision="${VERSION}"
 
 COPY --from=builder /app/build/datadog-sidekiq /

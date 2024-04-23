@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/DataDog/datadog-go/statsd"
-	"github.com/feedforce/datadog-sidekiq/slice"
+	"github.com/socialplusjp/datadog-sidekiq/slice"
 	"github.com/go-redis/redis/v8"
 )
 
