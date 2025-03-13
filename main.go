@@ -10,11 +10,17 @@ import (
 	"time"
 
 	"github.com/DataDog/datadog-go/statsd"
-	"github.com/socialplusjp/datadog-sidekiq/slice"
 	"github.com/go-redis/redis/v8"
+	"github.com/socialplusjp/datadog-sidekiq/slice"
 )
 
 var version = "dev"
+var timeNow = time.Now
+
+// for Sidekiq 8.0.x's timestamp format
+type JobParams struct {
+	EnqueuedAt int64 `json:"enqueued_at"`
+}
 
 func makeRedisKey(keys []string) string {
 	keys = slice.Delete(keys, "")
@@ -26,6 +32,19 @@ func calculateQueueLatency(contents string) float64 {
 		return 0
 	}
 
+	var params JobParams
+	if err := json.Unmarshal([]byte(contents), &params); err != nil {
+		return calculateLegacyQueueLatency(contents)
+	}
+
+	if params.EnqueuedAt == 0 {
+		return 0
+	}
+
+	return float64(timeNow().UnixMilli()-params.EnqueuedAt) / 1000.0
+}
+
+func calculateLegacyQueueLatency(contents string) float64 {
 	var job map[string]interface{}
 	if err := json.Unmarshal([]byte(contents), &job); err != nil {
 		log.Println(err)
@@ -33,7 +52,7 @@ func calculateQueueLatency(contents string) float64 {
 	}
 
 	if enqueuedAt, exists := job["enqueued_at"]; exists {
-		latency := float64(time.Now().UnixMicro())/1000000.0 - enqueuedAt.(float64)
+		latency := float64(timeNow().UnixMicro())/1000000.0 - enqueuedAt.(float64)
 		return latency
 	}
 
