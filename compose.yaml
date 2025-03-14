@@ -7,7 +7,7 @@ services:
       - redis
 
   dogstatsd:
-    image: jonmorehouse/dogstatsd-local
+    image: drish/dogstatsd-local
 
   redis:
     image: redis:alpine
