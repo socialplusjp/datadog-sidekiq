@@ -130,6 +130,7 @@ func main() {
 	redisPassword := flag.String("redis-password", "", "Redis password")
 	redisDB := flag.Int("redis-db", 0, "Redis DB")
 	redisTLS := flag.Bool("redis-tls", false, "Use TLS for Redis connection")
+	redisTLSInsecure := flag.Bool("redis-tls-insecure", false, "Skip TLS verification for Redis connection (use with caution)")
 	tags := flag.String("tags", "", "Add custom metric tags for Datadog. Specify in \"key:value\" format. Separate by comma to specify multiple tags")
 	flag.Parse()
 
@@ -141,6 +142,9 @@ func main() {
 	var tlsConfig *tls.Config
 	if *redisTLS {
 		tlsConfig = &tls.Config{}
+	}
+	if *redisTLSInsecure {
+		tlsConfig.InsecureSkipVerify = true
 	}
 
 	statsdClient, err := statsd.New(*statsdHost)
