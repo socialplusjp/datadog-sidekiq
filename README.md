@@ -2,17 +2,17 @@
 
 Send Sidekiq metrics to Datadog via DogStatsD.
 
-[![GitHub release](https://img.shields.io/github/release/feedforce/datadog-sidekiq.svg?style=flat-square)](https://github.com/feedforce/datadog-sidekiq/releases)
-[![MIT license](https://img.shields.io/github/license/feedforce/datadog-sidekiq.svg?style=flat-square)](https://github.com/feedforce/datadog-sidekiq/blob/main/LICENSE)
+[![GitHub release](https://img.shields.io/github/release/socialplusjp/datadog-sidekiq.svg?style=flat-square)](https://github.com/socialplusjp/datadog-sidekiq/releases)
+[![MIT license](https://img.shields.io/github/license/socialplusjp/datadog-sidekiq.svg?style=flat-square)](https://github.com/socialplusjp/datadog-sidekiq/blob/main/LICENSE)
 
 ## Installation
 
-Grab the latest binary from the GitHub [releases](https://github.com/feedforce/datadog-sidekiq/releases) page.
+Grab the latest binary from the GitHub [releases](https://github.com/socialplusjp/datadog-sidekiq/releases) page.
 
 or run with Docker.
 
 ```
-$ docker run -it ghcr.io/feedforce/datadog-sidekiq
+$ docker run -it ghcr.io/socialplusjp/datadog-sidekiq
 ```
 
 ## Usage
@@ -36,6 +36,8 @@ $ crontab -l
 | `-redis-host` | Redis host | 127.0.0.1:6379 |
 | `-redis-namespace` | Redis namespace for Sidekiq | |
 | `-redis-password` | Redis password | |
+| `-redis-tls` | Use TLS for Redis connection | false |
+| `-redis-tls-insecure` | Skip TLS verification for Redis connection (use with caution) | false |
 | `-statsd-host` | DogStatsD host | 127.0.0.1:8125 |
 | `-tags` | Add custom metric tags for Datadog. Specify in \"key:value\" format. Separate by comma to specify multiple tags | |
 | `-version` | Show datadog-sidekiq version | false |
