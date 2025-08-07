@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -128,12 +129,25 @@ func main() {
 	redisHost := flag.String("redis-host", "127.0.0.1:6379", "Redis host")
 	redisPassword := flag.String("redis-password", "", "Redis password")
 	redisDB := flag.Int("redis-db", 0, "Redis DB")
+	redisTLS := flag.Bool("redis-tls", false, "Use TLS for Redis connection")
+	redisTLSInsecure := flag.Bool("redis-tls-insecure", false, "Skip TLS verification for Redis connection (use with caution)")
 	tags := flag.String("tags", "", "Add custom metric tags for Datadog. Specify in \"key:value\" format. Separate by comma to specify multiple tags")
 	flag.Parse()
 
 	if *isShowVersion {
 		fmt.Printf("datadog-sidekiq version: %s\n", version)
 		return
+	}
+
+	var tlsConfig *tls.Config
+	if *redisTLS {
+		tlsConfig = &tls.Config{}
+	}
+	if *redisTLSInsecure {
+		if !*redisTLS {
+			log.Fatal("-redis-tls-insecure can only be used with -redis-tls")
+		}
+		tlsConfig.InsecureSkipVerify = true
 	}
 
 	statsdClient, err := statsd.New(*statsdHost)
@@ -144,9 +158,10 @@ func main() {
 	statsdClient.Namespace = "sidekiq."
 
 	redisClient := redis.NewClient(&redis.Options{
-		Addr:     *redisHost,
-		Password: *redisPassword,
-		DB:       *redisDB,
+		Addr:      *redisHost,
+		Password:  *redisPassword,
+		DB:        *redisDB,
+		TLSConfig: tlsConfig,
 	})
 
 	var ctx = context.Background()
