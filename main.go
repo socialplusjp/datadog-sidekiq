@@ -143,7 +143,7 @@ func main() {
 	if *redisTLS {
 		tlsConfig = &tls.Config{}
 	}
-	if *redisTLSInsecure {
+	if tlsConfig != nil && *redisTLSInsecure {
 		tlsConfig.InsecureSkipVerify = true
 	}
 
