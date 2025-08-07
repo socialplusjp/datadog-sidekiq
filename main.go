@@ -143,7 +143,10 @@ func main() {
 	if *redisTLS {
 		tlsConfig = &tls.Config{}
 	}
-	if tlsConfig != nil && *redisTLSInsecure {
+	if *redisTLSInsecure {
+		if !*redisTLS {
+			log.Fatal("-redis-tls-insecure can only be used with -redis-tls")
+		}
 		tlsConfig.InsecureSkipVerify = true
 	}
 
