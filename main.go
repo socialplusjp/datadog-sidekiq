@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -10,11 +11,17 @@ import (
 	"time"
 
 	"github.com/DataDog/datadog-go/statsd"
-	"github.com/socialplusjp/datadog-sidekiq/slice"
 	"github.com/go-redis/redis/v8"
+	"github.com/socialplusjp/datadog-sidekiq/slice"
 )
 
 var version = "dev"
+var timeNow = time.Now
+
+// for Sidekiq 8.0.x's timestamp format
+type JobParams struct {
+	EnqueuedAt int64 `json:"enqueued_at"`
+}
 
 func makeRedisKey(keys []string) string {
 	keys = slice.Delete(keys, "")
@@ -26,6 +33,19 @@ func calculateQueueLatency(contents string) float64 {
 		return 0
 	}
 
+	var params JobParams
+	if err := json.Unmarshal([]byte(contents), &params); err != nil {
+		return calculateLegacyQueueLatency(contents)
+	}
+
+	if params.EnqueuedAt == 0 {
+		return 0
+	}
+
+	return float64(timeNow().UnixMilli()-params.EnqueuedAt) / 1000.0
+}
+
+func calculateLegacyQueueLatency(contents string) float64 {
 	var job map[string]interface{}
 	if err := json.Unmarshal([]byte(contents), &job); err != nil {
 		log.Println(err)
@@ -33,7 +53,7 @@ func calculateQueueLatency(contents string) float64 {
 	}
 
 	if enqueuedAt, exists := job["enqueued_at"]; exists {
-		latency := float64(time.Now().UnixMicro())/1000000.0 - enqueuedAt.(float64)
+		latency := float64(timeNow().UnixMicro())/1000000.0 - enqueuedAt.(float64)
 		return latency
 	}
 
@@ -109,12 +129,25 @@ func main() {
 	redisHost := flag.String("redis-host", "127.0.0.1:6379", "Redis host")
 	redisPassword := flag.String("redis-password", "", "Redis password")
 	redisDB := flag.Int("redis-db", 0, "Redis DB")
+	redisTLS := flag.Bool("redis-tls", false, "Use TLS for Redis connection")
+	redisTLSInsecure := flag.Bool("redis-tls-insecure", false, "Skip TLS verification for Redis connection (use with caution)")
 	tags := flag.String("tags", "", "Add custom metric tags for Datadog. Specify in \"key:value\" format. Separate by comma to specify multiple tags")
 	flag.Parse()
 
 	if *isShowVersion {
 		fmt.Printf("datadog-sidekiq version: %s\n", version)
 		return
+	}
+
+	var tlsConfig *tls.Config
+	if *redisTLS {
+		tlsConfig = &tls.Config{}
+	}
+	if *redisTLSInsecure {
+		if !*redisTLS {
+			log.Fatal("-redis-tls-insecure can only be used with -redis-tls")
+		}
+		tlsConfig.InsecureSkipVerify = true
 	}
 
 	statsdClient, err := statsd.New(*statsdHost)
@@ -125,9 +158,10 @@ func main() {
 	statsdClient.Namespace = "sidekiq."
 
 	redisClient := redis.NewClient(&redis.Options{
-		Addr:     *redisHost,
-		Password: *redisPassword,
-		DB:       *redisDB,
+		Addr:      *redisHost,
+		Password:  *redisPassword,
+		DB:        *redisDB,
+		TLSConfig: tlsConfig,
 	})
 
 	var ctx = context.Background()
