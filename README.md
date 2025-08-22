@@ -35,6 +35,7 @@ $ crontab -l
 | `-redis-db` | Redis DB | 0 |
 | `-redis-host` | Redis host | 127.0.0.1:6379 |
 | `-redis-namespace` | Redis namespace for Sidekiq | |
+| `-redis-user` | Redis username | |
 | `-redis-password` | Redis password | |
 | `-redis-tls` | Use TLS for Redis connection | false |
 | `-redis-tls-insecure` | Skip TLS verification for Redis connection (use with caution) | false |
