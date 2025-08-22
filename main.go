@@ -179,5 +179,9 @@ func main() {
 			log.Fatal(err)
 		}
 	}
-	statsdClient.Flush()
+
+	err = statsdClient.Flush()
+	if err != nil {
+		log.Fatal(err)
+	}
 }
