@@ -127,6 +127,7 @@ func main() {
 	statsdHost := flag.String("statsd-host", "127.0.0.1:8125", "DogStatsD host")
 	redisNamespace := flag.String("redis-namespace", "", "Redis namespace for Sidekiq")
 	redisHost := flag.String("redis-host", "127.0.0.1:6379", "Redis host")
+	redisUser := flag.String("redis-user", "", "Redis username")
 	redisPassword := flag.String("redis-password", "", "Redis password")
 	redisDB := flag.Int("redis-db", 0, "Redis DB")
 	redisTLS := flag.Bool("redis-tls", false, "Use TLS for Redis connection")
@@ -159,6 +160,7 @@ func main() {
 
 	redisClient := redis.NewClient(&redis.Options{
 		Addr:      *redisHost,
+		Username:  *redisUser,
 		Password:  *redisPassword,
 		DB:        *redisDB,
 		TLSConfig: tlsConfig,
