@@ -12,7 +12,6 @@ on:
 jobs:
   # see https://github.com/goreleaser/goreleaser-action
   goreleaser:
-    if: github.event_name == 'release'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -33,7 +32,7 @@ jobs:
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
-          args: release --clean
+          args: ${{ github.event_name == 'release' && 'release --clean' || 'build --clean --snapshot' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
