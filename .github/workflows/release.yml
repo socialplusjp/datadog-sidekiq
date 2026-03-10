@@ -3,10 +3,16 @@ name: Release
 on:
   release:
     types: [published]
+  push:
+    branches:
+      - master
+      - main
+  pull_request:
 
 jobs:
   # see https://github.com/goreleaser/goreleaser-action
   goreleaser:
+    if: github.event_name == 'release'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -47,6 +53,7 @@ jobs:
           fetch-depth: 0
 
       - name: Log in to the Container registry
+        if: github.event_name == 'release'
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
@@ -61,10 +68,12 @@ jobs:
           # see https://github.com/docker/metadata-action/tree/3a3bb3a81753dc99f090d24ee7e5343838b73a96#tags-input
           tags: |
             type=semver,pattern={{version}}
+            type=ref,event=branch
+            type=ref,event=pr
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
-          push: true
+          push: ${{ github.event_name == 'release' }}
           tags: ${{ steps.meta.outputs.tags }}
           build-args: VERSION=${{ steps.meta.outputs.tags }}
