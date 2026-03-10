@@ -10,9 +10,10 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo -ldflag
 FROM scratch
 
 ARG VERSION="dev"
+ARG REVISION="unknown"
 
 LABEL org.opencontainers.image.source="https://github.com/socialplusjp/datadog-sidekiq"
-LABEL org.opencontainers.image.revision="${VERSION}"
+LABEL org.opencontainers.image.revision="${REVISION}"
 
 COPY --from=builder /app/build/datadog-sidekiq /
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
