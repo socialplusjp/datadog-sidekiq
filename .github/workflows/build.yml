@@ -27,8 +27,18 @@ jobs:
           args: build --clean --snapshot
 
   # see https://docs.github.com/en/actions/guides/publishing-docker-images#publishing-images-to-github-packages
+  # Build amd64/arm64 natively (no QEMU emulation) to catch per-arch build failures on every PR.
+  # push: false, so there's no digest/merge step here unlike release.yml.
   docker-build:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
     permissions:
       contents: read
     env:
@@ -39,6 +49,9 @@ jobs:
         uses: actions/checkout@v7
         with:
           fetch-depth: 1
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Transform GitHub Actions metadata to Docker image tags
         id: meta
@@ -52,6 +65,7 @@ jobs:
       - name: Build Docker image
         uses: docker/build-push-action@v7
         with:
+          platforms: ${{ matrix.platform }}
           push: false
           tags: ${{ steps.meta.outputs.tags }}
           build-args: |
