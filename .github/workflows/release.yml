@@ -30,8 +30,18 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   # see https://docs.github.com/en/actions/guides/publishing-docker-images#publishing-images-to-github-packages
-  build-and-push-image:
-    runs-on: ubuntu-latest
+  # Build amd64/arm64 natively (no QEMU emulation) and merge them into a single multi-arch
+  # manifest.
+  build-image:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
     permissions:
       contents: read
       packages: write
@@ -51,6 +61,14 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set platform pair # artifact names can't contain "/"
+        run: |
+          platform=${{ matrix.platform }}
+          echo "PLATFORM_PAIR=${platform//\//-}" >> "$GITHUB_ENV"
+
       - name: Transform GitHub Actions metadata to Docker image tags
         id: meta
         uses: docker/metadata-action@v6
@@ -60,11 +78,83 @@ jobs:
           tags: |
             type=semver,pattern={{version}}
 
-      - name: Build and push Docker image
+      - name: Build and push Docker image (by digest) # tagging happens in the merge job, so push by digest only here
+        id: build
         uses: docker/build-push-action@v7
         with:
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          platforms: ${{ matrix.platform }}
           build-args: |
             VERSION=${{ steps.meta.outputs.version }}
             REVISION=${{ github.sha }}
+          outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
+
+      - name: Export digest
+        run: |
+          mkdir -p /tmp/digests
+          digest="${{ steps.build.outputs.digest }}"
+          touch "/tmp/digests/${digest#sha256:}"
+
+      - name: Upload digest
+        uses: actions/upload-artifact@v4
+        with:
+          name: digests-${{ env.PLATFORM_PAIR }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  merge-image:
+    # Combine each arch's digest into a single multi-arch manifest and tag it.
+    needs: build-image
+    runs-on: ubuntu-latest # manifest merge only, amd64 runner is enough
+    permissions:
+      contents: read
+      packages: write
+    env:
+      REGISTRY: ghcr.io
+      IMAGE_NAME: ${{ github.repository }}
+    steps:
+      - name: Log in to the Container registry
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download digests
+        uses: actions/download-artifact@v5
+        with:
+          path: /tmp/digests
+          pattern: digests-*
+          merge-multiple: true
+
+      - name: Verify digests # without this, imagetools create fails with a confusing `@sha256:*` error
+        working-directory: /tmp/digests
+        run: |
+          digest_count=$(find . -maxdepth 1 -type f | wc -l)
+          if [ "$digest_count" -eq 0 ]; then
+            echo "::error::No digests found, both build-image jobs likely failed"
+            exit 1
+          fi
+          if [ "$digest_count" -lt 2 ]; then
+            echo "::warning::Only $digest_count digest(s) found (expected 2), one of the arch builds may have failed"
+          fi
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Transform GitHub Actions metadata to Docker image tags
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=semver,pattern={{version}}
+
+      - name: Create manifest list and push
+        working-directory: /tmp/digests
+        run: |
+          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf "${REGISTRY}/${IMAGE_NAME}@sha256:%s " *)
+
+      - name: Inspect image
+        run: docker buildx imagetools inspect "${REGISTRY}/${IMAGE_NAME}:${{ steps.meta.outputs.version }}"
