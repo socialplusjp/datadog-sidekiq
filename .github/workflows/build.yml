@@ -29,7 +29,7 @@ jobs:
   # see https://docs.github.com/en/actions/guides/publishing-docker-images#publishing-images-to-github-packages
   # Build amd64/arm64 natively (no QEMU emulation) to catch per-arch build failures on every PR.
   # push: false, so there's no digest/merge step here unlike release.yml.
-  docker-build:
+  docker-build-matrix:
     strategy:
       fail-fast: false
       matrix:
@@ -71,3 +71,18 @@ jobs:
           build-args: |
             VERSION=${{ steps.meta.outputs.version }}
             REVISION=${{ github.sha }}
+
+  # The "docker-build" name is a required status check (see repo ruleset), but a matrix job's
+  # reported context includes its matrix values (e.g. "docker-build-matrix (linux/amd64, ...)"),
+  # so this aggregator job keeps the exact "docker-build" context satisfied.
+  docker-build:
+    needs: docker-build-matrix
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check matrix result
+        run: |
+          if [ "${{ needs.docker-build-matrix.result }}" != "success" ]; then
+            echo "docker-build-matrix did not succeed: ${{ needs.docker-build-matrix.result }}"
+            exit 1
+          fi
