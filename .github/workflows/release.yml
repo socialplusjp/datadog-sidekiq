@@ -4,6 +4,10 @@ on:
   release:
     types: [published]
 
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
 jobs:
   # see https://github.com/goreleaser/goreleaser-action
   goreleaser:
@@ -45,9 +49,6 @@ jobs:
     permissions:
       contents: read
       packages: write
-    env:
-      REGISTRY: ghcr.io
-      IMAGE_NAME: ${{ github.repository }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -87,6 +88,8 @@ jobs:
             VERSION=${{ steps.meta.outputs.version }}
             REVISION=${{ github.sha }}
           outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=build-${{ matrix.platform }}
+          cache-to: type=gha,mode=max,scope=build-${{ matrix.platform }}
 
       - name: Export digest
         run: |
@@ -109,9 +112,6 @@ jobs:
     permissions:
       contents: read
       packages: write
-    env:
-      REGISTRY: ghcr.io
-      IMAGE_NAME: ${{ github.repository }}
     steps:
       - name: Log in to the Container registry
         uses: docker/login-action@v4
@@ -131,12 +131,9 @@ jobs:
         working-directory: /tmp/digests
         run: |
           digest_count=$(find . -maxdepth 1 -type f | wc -l)
-          if [ "$digest_count" -eq 0 ]; then
-            echo "::error::No digests found, both build-image jobs likely failed"
+          if [ "$digest_count" -ne 2 ]; then
+            echo "::error::Expected 2 digests (amd64, arm64), found $digest_count. Refusing to publish a partial multi-arch manifest."
             exit 1
-          fi
-          if [ "$digest_count" -lt 2 ]; then
-            echo "::warning::Only $digest_count digest(s) found (expected 2), one of the arch builds may have failed"
           fi
 
       - name: Set up Docker Buildx
