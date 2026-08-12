@@ -93,8 +93,12 @@ jobs:
 
       - name: Export digest
         run: |
-          mkdir -p /tmp/digests
           digest="${{ steps.build.outputs.digest }}"
+          if [[ ! "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "::error::build step produced no usable digest (got '${digest}'); check the 'Build and push Docker image' step above"
+            exit 1
+          fi
+          mkdir -p /tmp/digests
           touch "/tmp/digests/${digest#sha256:}"
 
       - name: Upload digest
