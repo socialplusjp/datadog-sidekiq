@@ -3,6 +3,10 @@ name: Build
 on:
   pull_request:
 
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
 jobs:
   # see https://github.com/goreleaser/goreleaser-action
   goreleaser:
@@ -27,18 +31,28 @@ jobs:
           args: build --clean --snapshot
 
   # see https://docs.github.com/en/actions/guides/publishing-docker-images#publishing-images-to-github-packages
-  docker-build:
-    runs-on: ubuntu-latest
+  # Build amd64/arm64 natively (no QEMU emulation) to catch per-arch build failures on every PR.
+  # push: false, so there's no digest/merge step here unlike release.yml.
+  docker-build-matrix:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
     permissions:
       contents: read
-    env:
-      REGISTRY: ghcr.io
-      IMAGE_NAME: ${{ github.repository }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
         with:
           fetch-depth: 1
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Transform GitHub Actions metadata to Docker image tags
         id: meta
@@ -52,8 +66,27 @@ jobs:
       - name: Build Docker image
         uses: docker/build-push-action@v7
         with:
+          platforms: ${{ matrix.platform }}
           push: false
           tags: ${{ steps.meta.outputs.tags }}
           build-args: |
             VERSION=${{ steps.meta.outputs.version }}
             REVISION=${{ github.sha }}
+          cache-from: type=gha,scope=build-${{ matrix.platform }}
+          cache-to: type=gha,mode=max,scope=build-${{ matrix.platform }}
+
+  # The "docker-build" name is a required status check (see repo ruleset), but a matrix job's
+  # reported context includes its matrix values (e.g. "docker-build-matrix (linux/amd64, ...)"),
+  # so this aggregator job keeps the exact "docker-build" context satisfied.
+  docker-build:
+    needs: docker-build-matrix
+    if: always()
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Check matrix result
+        run: |
+          if [ "${{ needs.docker-build-matrix.result }}" != "success" ]; then
+            echo "docker-build-matrix did not succeed: ${{ needs.docker-build-matrix.result }}"
+            exit 1
+          fi

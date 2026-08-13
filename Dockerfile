@@ -1,11 +1,13 @@
-FROM golang:1.18-alpine AS builder
+FROM --platform=$BUILDPLATFORM golang:1.18-alpine AS builder
 
 RUN apk add ca-certificates git
 
 ARG VERSION="dev"
+ARG TARGETOS
+ARG TARGETARCH
 WORKDIR /app
 COPY . /app/
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo -ldflags="-s -w -X main.version=${VERSION}" -o build/datadog-sidekiq
+RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -a -installsuffix cgo -ldflags="-s -w -X main.version=${VERSION}" -o build/datadog-sidekiq
 
 FROM scratch
 
