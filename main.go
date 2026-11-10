@@ -266,7 +266,7 @@ func main() {
 		if err != nil {
 			return err
 		}
-		defer statsdClient.Close()
+		defer func() { _ = statsdClient.Close() }()
 
 		return sendMetrics(ctx, redisClient, statsdClient, *redisNamespace, separatedTags)
 	}

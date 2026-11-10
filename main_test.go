@@ -174,14 +174,14 @@ func TestNewTLSDialer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer listener.Close()
+	defer func() { _ = listener.Close() }()
 	go func() {
 		for {
 			conn, err := listener.Accept()
 			if err != nil {
 				return
 			}
-			defer conn.Close()
+			defer func() { _ = conn.Close() }()
 		}
 	}()
 
@@ -195,7 +195,7 @@ func TestNewTLSDialer(t *testing.T) {
 		conn, err := dial(ctx, "tcp", listener.Addr().String())
 		elapsed := time.Since(start)
 		if err == nil {
-			conn.Close()
+			_ = conn.Close()
 			t.Fatal("Expect an error, Actual nil")
 		}
 		if elapsed > time.Second {
@@ -210,7 +210,7 @@ func TestNewStatsdClient(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Expect nil, Actual %v", err)
 		}
-		defer client.Close()
+		defer func() { _ = client.Close() }()
 
 		expect := "sidekiq."
 		if client.Namespace != expect {
@@ -221,7 +221,7 @@ func TestNewStatsdClient(t *testing.T) {
 	t.Run("When passed an invalid address", func(t *testing.T) {
 		client, err := newStatsdClient("127.0.0.1:invalid-port")
 		if err == nil {
-			client.Close()
+			_ = client.Close()
 			t.Error("Expect an error, Actual nil")
 		}
 	})
