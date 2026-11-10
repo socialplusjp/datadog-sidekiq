@@ -8,6 +8,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net"
 	"os/signal"
 	"strings"
 	"syscall"
@@ -186,6 +187,17 @@ func runLoop(ctx context.Context, interval time.Duration, maxConsecutiveErrors i
 	}
 }
 
+// newTLSDialer returns a Dialer that applies ctx to the TLS handshake as well.
+// go-redis's default one ignores ctx, so a Redis that does not respond to the handshake
+// blocks the call until DialTimeout, regardless of the interval or SIGTERM.
+func newTLSDialer(tlsConfig *tls.Config) func(ctx context.Context, network, addr string) (net.Conn, error) {
+	dialer := &tls.Dialer{
+		NetDialer: &net.Dialer{Timeout: 5 * time.Second, KeepAlive: 5 * time.Minute},
+		Config:    tlsConfig,
+	}
+	return dialer.DialContext
+}
+
 func main() {
 	isShowVersion := flag.Bool("version", false, "Show datadog-sidekiq version")
 	statsdHost := flag.String("statsd-host", "127.0.0.1:8125", "DogStatsD host")
@@ -231,13 +243,17 @@ func main() {
 
 	statsdClient.Namespace = "sidekiq."
 
-	redisClient := redis.NewClient(&redis.Options{
+	redisOptions := &redis.Options{
 		Addr:      *redisHost,
 		Username:  *redisUser,
 		Password:  *redisPassword,
 		DB:        *redisDB,
 		TLSConfig: tlsConfig,
-	})
+	}
+	if tlsConfig != nil {
+		redisOptions.Dialer = newTLSDialer(tlsConfig)
+	}
+	redisClient := redis.NewClient(redisOptions)
 
 	separatedTags := strings.Split(*tags, ",")
 	send := func(ctx context.Context) error {

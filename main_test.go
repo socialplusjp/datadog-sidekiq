@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
+	"net"
 	"testing"
 	"time"
 )
@@ -162,6 +164,42 @@ func TestRunLoop(t *testing.T) {
 		})
 		if err != nil {
 			t.Errorf("Expect nil, Actual %v", err)
+		}
+	})
+}
+
+func TestNewTLSDialer(t *testing.T) {
+	// a server that accepts connections but never answers the TLS handshake
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer listener.Close()
+	go func() {
+		for {
+			conn, err := listener.Accept()
+			if err != nil {
+				return
+			}
+			defer conn.Close()
+		}
+	}()
+
+	dial := newTLSDialer(&tls.Config{})
+
+	t.Run("When the handshake does not finish before the context is done", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+		defer cancel()
+
+		start := time.Now()
+		conn, err := dial(ctx, "tcp", listener.Addr().String())
+		elapsed := time.Since(start)
+		if err == nil {
+			conn.Close()
+			t.Fatal("Expect an error, Actual nil")
+		}
+		if elapsed > time.Second {
+			t.Errorf("Expect to give up by the context (100ms), Actual %s", elapsed)
 		}
 	})
 }
