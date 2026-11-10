@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
 	"os/signal"
 	"strings"
 	"syscall"
@@ -135,18 +136,39 @@ type gaugeFlusher interface {
 	Flush() error
 }
 
+// completeStatsdAddr fills in the address in the same way as statsd.New, which does not export it:
+// an empty addr falls back to DD_AGENT_HOST (and DD_DOGSTATSD_PORT), and a host without a port gets 8125.
+func completeStatsdAddr(addr string) string {
+	envPort := ""
+	if addr == "" {
+		addr = os.Getenv("DD_AGENT_HOST")
+		envPort = os.Getenv("DD_DOGSTATSD_PORT")
+	}
+	if addr == "" {
+		return ""
+	}
+
+	if !strings.HasPrefix(addr, statsd.WindowsPipeAddressPrefix) && !strings.HasPrefix(addr, statsd.UnixAddressPrefix) && !strings.Contains(addr, ":") {
+		if envPort == "" {
+			envPort = "8125"
+		}
+		addr = addr + ":" + envPort
+	}
+
+	return addr
+}
+
 // resolveStatsdAddr resolves the host of addr with ctx. statsd.New resolves it without a context,
 // so a DNS that does not respond blocks the call regardless of the interval or SIGTERM.
+// An address that cannot be handled here is returned as it is, so that statsd.New reports it as before.
 func resolveStatsdAddr(ctx context.Context, resolver *net.Resolver, addr string) (string, error) {
-	if strings.HasPrefix(addr, statsd.UnixAddressPrefix) || strings.HasPrefix(addr, statsd.WindowsPipeAddressPrefix) {
+	addr = completeStatsdAddr(addr)
+	if addr == "" || strings.HasPrefix(addr, statsd.UnixAddressPrefix) || strings.HasPrefix(addr, statsd.WindowsPipeAddressPrefix) {
 		return addr, nil
 	}
 
 	host, port, err := net.SplitHostPort(addr)
-	if err != nil {
-		return "", err
-	}
-	if host == "" || net.ParseIP(host) != nil {
+	if err != nil || host == "" || net.ParseIP(host) != nil {
 		return addr, nil
 	}
 
@@ -155,15 +177,16 @@ func resolveStatsdAddr(ctx context.Context, resolver *net.Resolver, addr string)
 		return "", err
 	}
 
-	ip := ips[0].IP
+	// keep the whole IPAddr so that the zone of a scoped IPv6 address (fe80::1%eth0) is not lost
+	selected := ips[0]
 	for _, candidate := range ips {
 		if candidate.IP.To4() != nil {
-			ip = candidate.IP
+			selected = candidate
 			break
 		}
 	}
 
-	return net.JoinHostPort(ip.String(), port), nil
+	return net.JoinHostPort(selected.String(), port), nil
 }
 
 func newStatsdClient(ctx context.Context, addr string) (*statsd.Client, error) {

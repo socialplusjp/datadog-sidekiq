@@ -241,8 +241,73 @@ func TestResolveStatsdAddr(t *testing.T) {
 	})
 
 	t.Run("When the address has no port", func(t *testing.T) {
-		if _, err := resolveStatsdAddr(context.Background(), net.DefaultResolver, "datadog-agent"); err == nil {
+		actual, err := resolveStatsdAddr(context.Background(), net.DefaultResolver, "localhost")
+		if err != nil {
+			t.Fatalf("Expect nil, Actual %v", err)
+		}
+		host, port, err := net.SplitHostPort(actual)
+		if err != nil {
+			t.Fatalf("Expect host:port, Actual %q (%v)", actual, err)
+		}
+		if port != "8125" {
+			t.Errorf("Expect the default port 8125, Actual %q", port)
+		}
+		if net.ParseIP(host) == nil {
+			t.Errorf("Expect the host to be resolved to an IP, Actual %q", host)
+		}
+	})
+
+	t.Run("When the address is empty", func(t *testing.T) {
+		t.Setenv("DD_AGENT_HOST", "127.0.0.1")
+		t.Setenv("DD_DOGSTATSD_PORT", "9999")
+		actual, err := resolveStatsdAddr(context.Background(), net.DefaultResolver, "")
+		if err != nil {
+			t.Fatalf("Expect nil, Actual %v", err)
+		}
+		if actual != "127.0.0.1:9999" {
+			t.Errorf("Expect %q, Actual %q", "127.0.0.1:9999", actual)
+		}
+
+		t.Setenv("DD_DOGSTATSD_PORT", "")
+		actual, err = resolveStatsdAddr(context.Background(), net.DefaultResolver, "")
+		if err != nil {
+			t.Fatalf("Expect nil, Actual %v", err)
+		}
+		if actual != "127.0.0.1:8125" {
+			t.Errorf("Expect %q, Actual %q", "127.0.0.1:8125", actual)
+		}
+	})
+
+	t.Run("When the address is empty and the environment variables are not set", func(t *testing.T) {
+		t.Setenv("DD_AGENT_HOST", "")
+		t.Setenv("DD_DOGSTATSD_PORT", "")
+		actual, err := resolveStatsdAddr(context.Background(), net.DefaultResolver, "")
+		if err != nil || actual != "" {
+			t.Errorf("Expect (\"\", nil), Actual (%q, %v)", actual, err)
+		}
+		// statsd.New reports the error as before
+		if _, err := newStatsdClient(context.Background(), ""); err == nil {
 			t.Error("Expect an error, Actual nil")
+		}
+	})
+
+	t.Run("When the address cannot be parsed", func(t *testing.T) {
+		for _, addr := range []string{"::1", "a:b:c"} {
+			actual, err := resolveStatsdAddr(context.Background(), net.DefaultResolver, addr)
+			if err != nil || actual != addr {
+				t.Errorf("Expect (%q, nil), Actual (%q, %v)", addr, actual, err)
+			}
+		}
+	})
+
+	t.Run("When the address is an IPv6 address with a zone", func(t *testing.T) {
+		addr := "[fe80::1%eth0]:8125"
+		actual, err := resolveStatsdAddr(context.Background(), net.DefaultResolver, addr)
+		if err != nil {
+			t.Fatalf("Expect nil, Actual %v", err)
+		}
+		if actual != addr {
+			t.Errorf("Expect %q, Actual %q", addr, actual)
 		}
 	})
 
