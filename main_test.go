@@ -206,7 +206,7 @@ func TestNewTLSDialer(t *testing.T) {
 
 func TestNewStatsdClient(t *testing.T) {
 	t.Run("When passed a valid address", func(t *testing.T) {
-		client, err := newStatsdClient("127.0.0.1:8125")
+		client, err := newStatsdClient(context.Background(), "127.0.0.1:8125")
 		if err != nil {
 			t.Fatalf("Expect nil, Actual %v", err)
 		}
@@ -219,10 +219,52 @@ func TestNewStatsdClient(t *testing.T) {
 	})
 
 	t.Run("When passed an invalid address", func(t *testing.T) {
-		client, err := newStatsdClient("127.0.0.1:invalid-port")
+		client, err := newStatsdClient(context.Background(), "127.0.0.1:invalid-port")
 		if err == nil {
 			_ = client.Close()
 			t.Error("Expect an error, Actual nil")
+		}
+	})
+}
+
+func TestResolveStatsdAddr(t *testing.T) {
+	t.Run("When the address does not need to be resolved", func(t *testing.T) {
+		for _, addr := range []string{"127.0.0.1:8125", "[::1]:8125", ":8125", "unix:///var/run/datadog/dsd.socket", `\\.\pipe\dsd`} {
+			actual, err := resolveStatsdAddr(context.Background(), net.DefaultResolver, addr)
+			if err != nil {
+				t.Errorf("Expect nil, Actual %v (input: %q)", err, addr)
+			}
+			if actual != addr {
+				t.Errorf("Expect %q, Actual %q", addr, actual)
+			}
+		}
+	})
+
+	t.Run("When the address has no port", func(t *testing.T) {
+		if _, err := resolveStatsdAddr(context.Background(), net.DefaultResolver, "datadog-agent"); err == nil {
+			t.Error("Expect an error, Actual nil")
+		}
+	})
+
+	t.Run("When the DNS does not respond before the context is done", func(t *testing.T) {
+		resolver := &net.Resolver{
+			PreferGo: true,
+			Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
+				<-ctx.Done()
+				return nil, ctx.Err()
+			},
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+		defer cancel()
+
+		start := time.Now()
+		_, err := resolveStatsdAddr(ctx, resolver, "datadog-agent.invalid:8125")
+		elapsed := time.Since(start)
+		if err == nil {
+			t.Fatal("Expect an error, Actual nil")
+		}
+		if elapsed > time.Second {
+			t.Errorf("Expect to give up by the context (100ms), Actual %s", elapsed)
 		}
 	})
 }

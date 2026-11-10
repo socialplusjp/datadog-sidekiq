@@ -135,8 +135,44 @@ type gaugeFlusher interface {
 	Flush() error
 }
 
-func newStatsdClient(addr string) (*statsd.Client, error) {
-	client, err := statsd.New(addr)
+// resolveStatsdAddr resolves the host of addr with ctx. statsd.New resolves it without a context,
+// so a DNS that does not respond blocks the call regardless of the interval or SIGTERM.
+func resolveStatsdAddr(ctx context.Context, resolver *net.Resolver, addr string) (string, error) {
+	if strings.HasPrefix(addr, statsd.UnixAddressPrefix) || strings.HasPrefix(addr, statsd.WindowsPipeAddressPrefix) {
+		return addr, nil
+	}
+
+	host, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		return "", err
+	}
+	if host == "" || net.ParseIP(host) != nil {
+		return addr, nil
+	}
+
+	ips, err := resolver.LookupIPAddr(ctx, host)
+	if err != nil {
+		return "", err
+	}
+
+	ip := ips[0].IP
+	for _, candidate := range ips {
+		if candidate.IP.To4() != nil {
+			ip = candidate.IP
+			break
+		}
+	}
+
+	return net.JoinHostPort(ip.String(), port), nil
+}
+
+func newStatsdClient(ctx context.Context, addr string) (*statsd.Client, error) {
+	resolved, err := resolveStatsdAddr(ctx, net.DefaultResolver, addr)
+	if err != nil {
+		return nil, err
+	}
+
+	client, err := statsd.New(resolved)
 	if err != nil {
 		return nil, err
 	}
@@ -262,7 +298,7 @@ func main() {
 	separatedTags := strings.Split(*tags, ",")
 	send := func(ctx context.Context) error {
 		// create a client on every run so that the address of DogStatsD is resolved again
-		statsdClient, err := newStatsdClient(*statsdHost)
+		statsdClient, err := newStatsdClient(ctx, *statsdHost)
 		if err != nil {
 			return err
 		}
