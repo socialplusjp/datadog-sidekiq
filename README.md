@@ -28,10 +28,25 @@ $ crontab -l
 * * * * * /usr/local/bin/datadog-sidekiq
 ```
 
+### Running continuously
+
+With `-interval`, it keeps running and sends metrics at that interval instead of exiting after one run.
+This is useful when you want to send metrics more often than every minute, or run it as a long-lived process such as a Kubernetes Deployment.
+
+```
+$ datadog-sidekiq -interval 10s
+```
+
+- Each run is limited to `-interval`, so a stuck Redis does not block the loop.
+- A failed run is logged and retried at the next interval. After `-max-consecutive-errors` failures in a row, it exits with an error so that the process manager can restart it.
+- On SIGINT or SIGTERM, it stops after closing the connections and exits with 0.
+
 ### Options
 
 | Option | Description | Default value |
 | --- | --- | --- |
+| `-interval` | Send metrics repeatedly at this interval (e.g. `10s`). If `0`, send once and exit | 0 |
+| `-max-consecutive-errors` | Exit with an error after this many consecutive failures when `-interval` is set. If `0`, never exit on errors | 6 |
 | `-redis-db` | Redis DB | 0 |
 | `-redis-host` | Redis host | 127.0.0.1:6379 |
 | `-redis-namespace` | Redis namespace for Sidekiq | |
