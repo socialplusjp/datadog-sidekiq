@@ -203,3 +203,26 @@ func TestNewTLSDialer(t *testing.T) {
 		}
 	})
 }
+
+func TestNewStatsdClient(t *testing.T) {
+	t.Run("When passed a valid address", func(t *testing.T) {
+		client, err := newStatsdClient("127.0.0.1:8125")
+		if err != nil {
+			t.Fatalf("Expect nil, Actual %v", err)
+		}
+		defer client.Close()
+
+		expect := "sidekiq."
+		if client.Namespace != expect {
+			t.Errorf("Expect %q, Actual %q", expect, client.Namespace)
+		}
+	})
+
+	t.Run("When passed an invalid address", func(t *testing.T) {
+		client, err := newStatsdClient("127.0.0.1:invalid-port")
+		if err == nil {
+			client.Close()
+			t.Error("Expect an error, Actual nil")
+		}
+	})
+}

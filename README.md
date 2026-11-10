@@ -40,7 +40,8 @@ $ datadog-sidekiq -interval 10s
 - Each run is limited to `-interval`, so a stuck Redis does not block the loop.
 - A failed run is logged and retried at the next interval. After `-max-consecutive-errors` failures in a row, it exits with an error so that the process manager can restart it.
 - On SIGINT or SIGTERM, it stops after closing the connections and exits with 0.
-- Errors from writing to DogStatsD are not detected, because the DogStatsD client sends asynchronously over UDP. Only failures to fetch from Redis are counted.
+- A DogStatsD client is created on every run, so the address of DogStatsD is resolved again each time. Failing to create it is counted as a failure.
+- Errors from writing to DogStatsD are not detected, because the DogStatsD client sends asynchronously over UDP.
 
 ### Options
 

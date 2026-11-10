@@ -135,6 +135,17 @@ type gaugeFlusher interface {
 	Flush() error
 }
 
+func newStatsdClient(addr string) (*statsd.Client, error) {
+	client, err := statsd.New(addr)
+	if err != nil {
+		return nil, err
+	}
+
+	client.Namespace = "sidekiq."
+
+	return client, nil
+}
+
 func sendMetrics(ctx context.Context, c *redis.Client, g gaugeFlusher, namespace string, tags []string) error {
 	metrics, err := fetchMetrics(ctx, c, namespace)
 	if err != nil {
@@ -236,13 +247,6 @@ func main() {
 		tlsConfig.InsecureSkipVerify = true
 	}
 
-	statsdClient, err := statsd.New(*statsdHost)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	statsdClient.Namespace = "sidekiq."
-
 	redisOptions := &redis.Options{
 		Addr:      *redisHost,
 		Username:  *redisUser,
@@ -257,6 +261,13 @@ func main() {
 
 	separatedTags := strings.Split(*tags, ",")
 	send := func(ctx context.Context) error {
+		// create a client on every run so that the address of DogStatsD is resolved again
+		statsdClient, err := newStatsdClient(*statsdHost)
+		if err != nil {
+			return err
+		}
+		defer statsdClient.Close()
+
 		return sendMetrics(ctx, redisClient, statsdClient, *redisNamespace, separatedTags)
 	}
 
@@ -270,9 +281,8 @@ func main() {
 	// exit quietly on SIGTERM, e.g. when a Pod is stopped
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	log.Printf("sending metrics every %s", *interval)
-	err = runLoop(ctx, *interval, *maxConsecutiveErrors, send)
+	err := runLoop(ctx, *interval, *maxConsecutiveErrors, send)
 	stop()
-	_ = statsdClient.Close()
 	_ = redisClient.Close()
 	if err != nil {
 		log.Fatal(err)
