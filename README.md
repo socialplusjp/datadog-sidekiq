@@ -42,6 +42,7 @@ $ datadog-sidekiq -interval 10s
 - On SIGINT or SIGTERM, it stops after closing the connections and exits with 0.
 - A DogStatsD client is created on every run, so the address of DogStatsD is resolved again each time. Failing to create it is counted as a failure.
 - Errors from writing to DogStatsD are not detected, because the DogStatsD client sends asynchronously over UDP.
+- With a Unix domain socket (`-statsd-host unix:///path/to/socket`), flushing cannot be interrupted by the interval or by SIGTERM. If the receiver stops reading, each write waits up to 100ms (the DogStatsD client's default write timeout), so a run, or the shutdown, can be delayed by that much.
 
 ### Options
 
