@@ -1,12 +1,18 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"crypto/tls"
 	"errors"
+	"io"
 	"net"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
+
+	"github.com/go-redis/redis/v8"
 )
 
 var testCases = []struct {
@@ -62,6 +68,110 @@ func TestCalculateQueueLatency(t *testing.T) {
 		actual := calculateQueueLatency(jobParams)
 		if expect != actual {
 			t.Errorf("Expect %f, Actual %f (input :%q)", expect, actual, jobParams)
+		}
+	})
+}
+
+// newFakeRedis starts a minimal RESP server with one queue ("default") that answers what fetchMetrics
+// asks for. lindexReply is sent as it is for LINDEX, so that a test can choose an empty queue or an error.
+func newFakeRedis(t *testing.T, lindexReply string) *redis.Client {
+	t.Helper()
+
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = ln.Close() })
+
+	go func() {
+		for {
+			conn, err := ln.Accept()
+			if err != nil {
+				return
+			}
+			go serveFakeRedis(conn, lindexReply)
+		}
+	}()
+
+	client := redis.NewClient(&redis.Options{Addr: ln.Addr().String()})
+	t.Cleanup(func() { _ = client.Close() })
+
+	return client
+}
+
+func serveFakeRedis(conn net.Conn, lindexReply string) {
+	defer func() { _ = conn.Close() }()
+
+	r := bufio.NewReader(conn)
+	for {
+		// a command is an array of bulk strings: *<n>\r\n, then n times $<size>\r\n<data>\r\n
+		header, err := r.ReadString('\n')
+		if err != nil {
+			return
+		}
+		n, _ := strconv.Atoi(strings.TrimSpace(strings.TrimPrefix(header, "*")))
+
+		args := make([]string, 0, n)
+		for i := 0; i < n; i++ {
+			sizeLine, err := r.ReadString('\n')
+			if err != nil {
+				return
+			}
+			size, _ := strconv.Atoi(strings.TrimSpace(strings.TrimPrefix(sizeLine, "$")))
+
+			buf := make([]byte, size+2) // data and \r\n
+			if _, err := io.ReadFull(r, buf); err != nil {
+				return
+			}
+			args = append(args, string(buf[:size]))
+		}
+		if len(args) == 0 {
+			return
+		}
+
+		var reply string
+		switch strings.ToLower(args[0]) {
+		case "smembers":
+			if strings.HasSuffix(args[1], "queues") {
+				reply = "*1\r\n$7\r\ndefault\r\n"
+			} else {
+				reply = "*0\r\n" // processes
+			}
+		case "lindex":
+			reply = lindexReply
+		case "llen", "zcard":
+			reply = ":0\r\n"
+		default:
+			reply = "-ERR unknown command\r\n"
+		}
+
+		if _, err := conn.Write([]byte(reply)); err != nil {
+			return
+		}
+	}
+}
+
+func TestFetchMetricsLatency(t *testing.T) {
+	t.Run("When the queue is empty", func(t *testing.T) {
+		client := newFakeRedis(t, "$-1\r\n") // redis.Nil
+
+		metrics, err := fetchMetrics(context.Background(), client, "")
+		if err != nil {
+			t.Fatalf("Expect nil, Actual %v", err)
+		}
+
+		latency, exists := metrics["latency.default"]
+		if !exists || latency != 0 {
+			t.Errorf("Expect latency.default to be 0, Actual %v (exists: %v)", latency, exists)
+		}
+	})
+
+	t.Run("When LINDEX fails", func(t *testing.T) {
+		client := newFakeRedis(t, "-ERR boom\r\n")
+
+		metrics, err := fetchMetrics(context.Background(), client, "")
+		if err == nil {
+			t.Fatalf("Expect an error instead of sending latency 0, Actual nil (metrics: %v)", metrics)
 		}
 	})
 }

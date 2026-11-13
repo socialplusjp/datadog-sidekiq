@@ -76,11 +76,14 @@ func fetchMetrics(ctx context.Context, c *redis.Client, namespace string) (map[s
 	var enqueuedSum float64
 	for _, queue := range queues {
 		contents, err := c.LIndex(ctx, makeRedisKey([]string{namespace, "queue", queue}), -1).Result()
-		if err == nil {
-			latency := calculateQueueLatency(contents)
-			metrics["latency."+queue] = latency
-		} else {
+		switch {
+		case errors.Is(err, redis.Nil): // an empty queue
 			metrics["latency."+queue] = 0.0
+		case err != nil:
+			// sending 0 here would look like no latency to an HPA, so fail the whole run instead
+			return nil, err
+		default:
+			metrics["latency."+queue] = calculateQueueLatency(contents)
 		}
 
 		enqueued, err := c.LLen(ctx, makeRedisKey([]string{namespace, "queue", queue})).Result()
@@ -195,7 +198,9 @@ func newStatsdClient(ctx context.Context, addr string) (*statsd.Client, error) {
 		return nil, err
 	}
 
-	client, err := statsd.New(resolved)
+	// the client is created on every run, and a handful of gauges does not need the default pool
+	// (2048 buffers of about 1.4KB for UDP). A buffer is allocated on demand if the pool runs out.
+	client, err := statsd.New(resolved, statsd.WithBufferPoolSize(8))
 	if err != nil {
 		return nil, err
 	}
