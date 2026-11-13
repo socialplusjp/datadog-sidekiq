@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM golang:1.18-alpine AS builder
+FROM --platform=$BUILDPLATFORM golang:1.27-alpine AS builder
 
 RUN apk add ca-certificates git
 
